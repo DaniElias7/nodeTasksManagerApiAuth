@@ -1,37 +1,36 @@
-import { useEffect, useState } from 'react';
-import { TaskService } from '../services/tasks';
-import { Task } from '../types';
+import React from 'react';
+import { useTodoContext } from '../context/TodoContext';
+import TaskItem from './TaskItem';
+import styles from '../styles/TaskList.module.css';
 
-export const TaskList = () => {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
+const TaskList = () => {
+  const { state } = useTodoContext();
+  const { tasks, filter, searchQuery } = state;
 
-  useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        const data = await TaskService.getAll();
-        setTasks(data);
-      } catch (error) {
-        console.error('Error fetching tasks:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTasks();
-  }, []);
-
-  if (loading) return <div>Loading tasks...</div>;
+  const filteredTasks = tasks.filter(task => {
+    // Apply filter
+    if (filter === 'completed' && !task.completed) return false;
+    if (filter === 'active' && task.completed) return false;
+    
+    // Apply search
+    if (searchQuery && !task.text.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
+    
+    return true;
+  });
 
   return (
-    <div>
-      {tasks.map((task) => (
-        <div key={task._id} className="task-item">
-          <h3>{task.title}</h3>
-          <p>{task.description}</p>
-          <p>Status: {task.completed ? 'Completed' : 'Pending'}</p>
-        </div>
-      ))}
-    </div>
+    <ul className={styles.taskList}>
+      {filteredTasks.length > 0 ? (
+        filteredTasks.map(task => (
+          <TaskItem key={task.id} task={task} />
+        ))
+      ) : (
+        <li className={styles.emptyMessage}>No tasks found. Add a new task!</li>
+      )}
+    </ul>
   );
 };
+
+export default TaskList;

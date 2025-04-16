@@ -1,18 +1,20 @@
-import { ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
+import { useRouter } from 'next/router';
 import { useAuth } from '../context/AuthContext';
+import { useEffect } from 'react';
 
-interface ProtectedRouteProps {
-  children: ReactNode;
-  roles?: string[];
+export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth(); // Get loading state
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+
+  if (loading) {
+    return <div>Loading...</div>; // Or your loading indicator
+  }
+
+  return <>{user ? children : null}</>;
 }
-
-export const ProtectedRoute = ({ children, roles }: ProtectedRouteProps) => {
-  const { user, loading } = useAuth();
-
-  if (loading) return <div>Loading...</div>;
-  if (!user) return <Navigate to="/login" replace />;
-  if (roles && !roles.includes(user.role)) return <Navigate to="/" replace />;
-
-  return <>{children}</>;
-};

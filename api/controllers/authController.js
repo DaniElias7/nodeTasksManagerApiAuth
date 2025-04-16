@@ -67,12 +67,20 @@ export const register = async (req, res) => {
     // 4. Generate JWT
     const token = generateToken(newUser);
 
+    // Set the token as httpOnly cookie
+    res.cookie('authToken', token, {
+      httpOnly: true,
+      secure: false, // CHANGE FOR PRODUCTION WITH THIS: process.env.NODE_ENV === 'production'
+      maxAge: 3600000 * 336, // 336 hours = 14 days
+      path: '/',
+      domain: 'localhost' // Adjust this for your production domain
+    });
+    
     // 5. Send Response
     res.status(201).json({
         id: newUser.id, // Use id from PG
         name: newUser.name,
-        email: newUser.email,
-        token: token
+        email: newUser.email
     });
 
     console.log("User created Succesfully: ", newUser); // Log the new user data
@@ -90,6 +98,8 @@ export const register = async (req, res) => {
 // --- Login Route ---
 export const login = async (req, res) => {
   const { email, password } = req.body;
+
+  console.log("Starting to login user: ", { email, password });
 
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password are required.' });
@@ -120,14 +130,29 @@ export const login = async (req, res) => {
 
     // 4. Generate JWT
     const token = generateToken(user);
+    console.log("Generated Token:", token);
+
+    console.log("Attempting to set cookie...");
+    // Set the token as httpOnly cookie
+    res.cookie('authToken', token, {
+      // httpOnly: true,
+      // secure: false, // CHANGE FOR PRODUCTION WITH THIS: process.env.NODE_ENV === 'production'
+      // maxAge: 3600000 * 336, // 336 hours = 14 days
+      path: '/'
+      // domain: 'localhost'
+    });
+    console.log("Cookie set attempt completed.");
+
+    console.log("Response Headers before sending:", res.getHeaders());
 
     // 5. Send Response
-    res.json({
+    res.status(201).json({
       id: user.id, // Use id from PG
       name: user.name,
-      email: user.email,
-      token: token
+      email: user.email
     });
+
+    console.log("User logged in successfully: ", user); // Log the user data
 
   } catch (error) {
     console.error("Login Error:", error);
@@ -135,3 +160,30 @@ export const login = async (req, res) => {
   }
 };
 
+// --- Auth me Route --- Check Auth Cookie
+export const checkAuthCookie = async (req, res) => {
+  console.log("Checking auth cookie...");
+
+  try {
+    // The authenticateToken middleware has already verified the token
+    // and attached the decoded payload to req.user.
+    const userId = req.user.id; // Assuming your JWT payload has a 'id' property
+
+    // Fetch the user from the database
+    const userQuery = 'SELECT id, name, email FROM users WHERE id = $1'; // Adjust the columns you want to return
+    const { rows } = await pool.query(userQuery, [userId]);
+
+    if (rows.length === 1) {
+      // User found, send back the user data
+      const user = rows[0];
+      res.status(200).json(user);
+    } else {
+      // This should ideally not happen if your authenticateToken middleware
+      // includes the optional database check.
+      return res.status(404).json({ error: 'User not found' });
+    }
+  } catch (error) {
+    console.error('Error fetching user data:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+}
