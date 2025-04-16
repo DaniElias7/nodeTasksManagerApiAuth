@@ -67,13 +67,8 @@ export const register = async (req, res) => {
     // 4. Generate JWT
     const token = generateToken(newUser);
 
-    // Set the token as httpOnly cookie
     res.cookie('authToken', token, {
-      httpOnly: true,
-      secure: false, // CHANGE FOR PRODUCTION WITH THIS: process.env.NODE_ENV === 'production'
-      maxAge: 3600000 * 336, // 336 hours = 14 days
-      path: '/',
-      domain: 'localhost' // Adjust this for your production domain
+      path: '/'
     });
     
     // 5. Send Response
@@ -133,13 +128,9 @@ export const login = async (req, res) => {
     console.log("Generated Token:", token);
 
     console.log("Attempting to set cookie...");
-    // Set the token as httpOnly cookie
+    
     res.cookie('authToken', token, {
-      // httpOnly: true,
-      // secure: false, // CHANGE FOR PRODUCTION WITH THIS: process.env.NODE_ENV === 'production'
-      // maxAge: 3600000 * 336, // 336 hours = 14 days
       path: '/'
-      // domain: 'localhost'
     });
     console.log("Cookie set attempt completed.");
 
@@ -157,6 +148,23 @@ export const login = async (req, res) => {
   } catch (error) {
     console.error("Login Error:", error);
     res.status(500).json({ error: 'Server error during login.' });
+  }
+};
+
+// --- Logout Route ---
+export const logout = async (req, res) => {
+  try {
+    // Clear the authToken cookie
+    res.clearCookie('authToken', { path: '/' });
+
+    // Send a success response
+    res.status(200).json({ message: 'Logged out successfully.' });
+
+    console.log("User logged out.");
+
+  } catch (error) {
+    console.error("Logout Error:", error);
+    res.status(500).json({ error: 'Server error during logout.' });
   }
 };
 

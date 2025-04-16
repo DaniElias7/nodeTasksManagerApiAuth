@@ -11,12 +11,12 @@ const TaskList = () => {
     // Apply filter
     if (filter === 'completed' && !task.completed) return false;
     if (filter === 'active' && task.completed) return false;
-    
+
     // Apply search
     if (searchQuery && !task.text.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false;
     }
-    
+
     return true;
   });
 

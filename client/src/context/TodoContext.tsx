@@ -1,9 +1,10 @@
 // src/context/TodoContext.tsx
-import React, { createContext, useReducer, useContext } from 'react';
+import React, { createContext, useReducer, useContext, useEffect, useCallback } from 'react';
+import { useAuth } from './AuthContext'; // 
 
-type Priority = 'low' | 'medium' | 'high';
+export type Priority = 'low' | 'medium' | 'high';
 
-interface Task {
+export interface Task {
   id: string;
   text: string;
   completed: boolean;
@@ -39,32 +40,14 @@ const initialState: TodoState = {
 
 const todoReducer = (state: TodoState, action: TodoAction): TodoState => {
   switch (action.type) {
-    case 'ADD_TASK':
-      return {
-        ...state,
-        tasks: [action.payload, ...state.tasks],
-      };
-    case 'EDIT_TASK':
-      return {
-        ...state,
-        tasks: state.tasks.map(task =>
-          task.id === action.payload.id ? action.payload : task
-        ),
-      };
-    case 'DELETE_TASK':
-      return {
-        ...state,
-        tasks: state.tasks.filter(task => task.id !== action.payload),
-      };
-    case 'TOGGLE_COMPLETE':
-      return {
-        ...state,
-        tasks: state.tasks.map(task =>
-          task.id === action.payload
-            ? { ...task, completed: !task.completed }
-            : task
-        ),
-      };
+    case 'ADD_TASK': // We'll handle this via API call and refetch
+      return state;
+    case 'EDIT_TASK': // We'll handle this via API call and refetch
+      return state;
+    case 'DELETE_TASK': // We'll handle this via API call and refetch
+      return state;
+    case 'TOGGLE_COMPLETE': // We'll handle this via API call and refetch
+      return state;
     case 'SET_FILTER':
       return {
         ...state,
@@ -87,9 +70,107 @@ const todoReducer = (state: TodoState, action: TodoAction): TodoState => {
 
 export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(todoReducer, initialState);
+  const { user, isAuthenticated } = useAuth();
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL as string;
+
+  const fetchTasks = useCallback(async () => {
+    if (isAuthenticated && user?.id) {
+      try {
+        const response = await fetch(`${backendUrl}/api/${user.id}/tasks`, {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          dispatch({ type: 'LOAD_TASKS', payload: data });
+        } else {
+          console.error('Failed to fetch tasks:', response);
+        }
+      } catch (error) {
+        console.error('Error fetching tasks:', error);
+      }
+    } else {
+      dispatch({ type: 'LOAD_TASKS', payload: [] });
+    }
+  }, [isAuthenticated, user?.id, backendUrl, dispatch]);
+
+  const addTask = async (text: string, priority: Priority) => {
+    if (isAuthenticated && user?.id) {
+      try {
+        const response = await fetch(`${backendUrl}/api/${user.id}/tasks`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ text, priority }),
+          credentials: 'include',
+        });
+        if (response.ok) {
+          fetchTasks(); // Re-fetch tasks to update the list
+        } else {
+          console.error('Failed to add task:', response);
+        }
+      } catch (error) {
+        console.error('Error adding task:', error);
+      }
+    }
+  };
+
+  const updateTask = async (id: string, updatedTask: Partial<Task>) => {
+    if (isAuthenticated && user?.id) {
+      try {
+        const response = await fetch(`${backendUrl}/api/${user.id}/tasks/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updatedTask),
+          credentials: 'include',
+        });
+        if (response.ok) {
+          fetchTasks(); // Re-fetch tasks to update the list
+        } else {
+          console.error('Failed to update task:', response);
+        }
+      } catch (error) {
+        console.error('Error updating task:', error);
+      }
+    }
+  };
+
+  const deleteTask = async (id: string) => {
+    if (isAuthenticated && user?.id) {
+      try {
+        const response = await fetch(`${backendUrl}/api/${user.id}/tasks/${id}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+        if (response.ok) {
+          fetchTasks(); // Re-fetch tasks to update the list
+        } else {
+          console.error('Failed to delete task:', response);
+        }
+      } catch (error) {
+        console.error('Error deleting task:', error);
+      }
+    }
+  };
+
+  const toggleCompleteTask = async (id: string) => {
+    const taskToUpdate = state.tasks.find(task => task.id === id);
+    if (taskToUpdate) {
+      await updateTask(id, { completed: !taskToUpdate.completed });
+    }
+  };
+
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
 
   return (
-    <TodoContext.Provider value={{ state, dispatch }}>
+    <TodoContext.Provider value={{ state, dispatch, addTask, updateTask, deleteTask, toggleCompleteTask, setFilter: (filter) => dispatch({ type: 'SET_FILTER', payload: filter }), setSearchQuery: (query) => dispatch({ type: 'SET_SEARCH_QUERY', payload: query }) }}>
       {children}
     </TodoContext.Provider>
   );

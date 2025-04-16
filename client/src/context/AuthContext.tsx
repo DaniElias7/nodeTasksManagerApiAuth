@@ -13,7 +13,7 @@ interface AuthContextType {
   loading: boolean; // Add loading to the interface
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   fetchUser: () => Promise<void>;
 }
 
@@ -25,10 +25,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true); // Initialize loading state
   const router = useRouter();
 
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL as string;
+  const signUpEndpoint = process.env.NEXT_PUBLIC_AUTH_REGISTER_ENDPOINT as string;
+  const loginEndpoint = process.env.NEXT_PUBLIC_AUTH_LOGIN_ENDPOINT as string;
+  const logoutEndpoint = process.env.NEXT_PUBLIC_AUTH_LOGOUT_ENDPOINT as string;
+  const getUserData = process.env.NEXT_PUBLIC_AUTH_GET_USER_DATA_FROM_COOKIE as string;
+
+
   const login = async (email: string, password: string) => {
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL as string;
-      const loginEndpoint = process.env.NEXT_PUBLIC_AUTH_LOGIN_ENDPOINT as string;
       const response = await fetch(`${backendUrl}${loginEndpoint}`, {
         method: 'POST',
         headers: {
@@ -56,14 +61,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signup = async (name: string, email: string, password: string) => {
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL as string;
-      const signUpEndpoint = process.env.NEXT_PUBLIC_AUTH_REGISTER_ENDPOINT as string;
       const response = await fetch(`${backendUrl}${signUpEndpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ name, email, password }),
+        credentials: 'include', // Include cookies in the request
       });
 
       if (response.status === 201) {
@@ -84,35 +88,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
+    setLoading(true);
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL as string;
-      const response = await fetch(`${backendUrl}/api/auth/logout`, {
+
+      const response = await fetch(`${backendUrl}${logoutEndpoint}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        credentials: 'include', // Make sure to include credentials
       });
 
       if (response.ok) {
         setUser(null);
         setIsAuthenticated(false);
-        setLoading(false); // Set loading to false after logout
-        router.push('/login');
+        router.push('/login'); // Redirect to the login page after logout
       } else {
         console.error('Logout failed');
-        setLoading(false); // Set loading to false on failure
       }
     } catch (error) {
       console.error('Logout error:', error);
-      setLoading(false); // Set loading to false on error
+    } finally {
+      setLoading(false);
     }
   };
 
   const fetchUser = async () => {
     setLoading(true); // Set loading to true before fetching
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL as string;
-      const getUserData = process.env.NEXT_PUBLIC_AUTH_GET_USER_DATA_FROM_COOKIE as string;
       const response = await fetch(`${backendUrl}${getUserData}`, {
         method: 'GET',
         headers: {

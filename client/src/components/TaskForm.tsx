@@ -1,25 +1,17 @@
 import React, { useState } from 'react';
-import { useTodoContext } from '../context/TodoContext';
+import { Priority, useTodoContext } from '../context/TodoContext';
 import styles from '../styles/TaskForm.module.css';
 
 const TaskForm = () => {
   const [taskText, setTaskText] = useState('');
   const [priority, setPriority] = useState<Priority>('medium');
-  const { dispatch } = useTodoContext();
+  const { addTask } = useTodoContext(); // Get the addTask function from the context
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!taskText.trim()) return;
 
-    const newTask: Task = {
-      id: Date.now().toString(),
-      text: taskText,
-      completed: false,
-      priority,
-      createdAt: new Date().toISOString(),
-    };
-
-    dispatch({ type: 'ADD_TASK', payload: newTask });
+    addTask(taskText, priority); // Call the addTask function with the form values
     setTaskText('');
     setPriority('medium');
   };

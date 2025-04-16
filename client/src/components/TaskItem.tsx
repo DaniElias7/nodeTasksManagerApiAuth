@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTodoContext } from '../context/TodoContext';
+import { Task, useTodoContext } from '../context/TodoContext';
 import styles from '../styles/TaskItem.module.css';
 
 interface TaskItemProps {
@@ -9,23 +9,22 @@ interface TaskItemProps {
 const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(task.text);
-  const { dispatch } = useTodoContext();
+  const { updateTask, deleteTask, toggleCompleteTask } = useTodoContext(); // Get the functions from the context
 
   const handleComplete = () => {
-    dispatch({ type: 'TOGGLE_COMPLETE', payload: task.id });
+    toggleCompleteTask(task.id); // Call the toggleCompleteTask function
   };
 
   const handleDelete = () => {
-    dispatch({ type: 'DELETE_TASK', payload: task.id });
+    deleteTask(task.id); // Call the deleteTask function
   };
 
   const handleEdit = () => {
-    if (editText.trim()) {
-      dispatch({
-        type: 'EDIT_TASK',
-        payload: { ...task, text: editText },
-      });
+    if (editText.trim() && editText !== task.text) {
+      updateTask(task.id, { text: editText }); // Call the updateTask function
       setIsEditing(false);
+    } else {
+      setIsEditing(false); // If text is empty or unchanged, just stop editing
     }
   };
 
