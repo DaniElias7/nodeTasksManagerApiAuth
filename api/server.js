@@ -29,7 +29,7 @@ app.use('/api/:user_id/', taskRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
-  console.error('🔥 Error:', err.stack);
+  console.error('Error:', err.stack);
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
@@ -37,7 +37,7 @@ app.use((err, req, res, next) => {
 const startServer = async () => {
   await testConnection
   app.listen(PORT, () => 
-    console.log(`🚀 Server running on port http://localhost:${PORT}`)
+    console.log(`Server running on port http://localhost:${PORT}`)
   );
 };
 
